@@ -1,17 +1,23 @@
-'''Pull links and build postgres db '''
-from urllib.parse import urljoin
-from bs4 import BeautifulSoup as bs
+'''creates tables and import turnstile data'''
+from sqlalchemy import create_engine, Table, MetaData
+import database as db
+import turnstile
 import requests as r
+from io import StringIO
+import csv
 
-def mta_turnstile_web_scrape():
-    """
-    :param: no params
-    :return: list of links from mta turnstile date website
-    """
-    url = "http://web.mta.info/developers/turnstile.html"
-    data_url = "http://web.mta.info/developers/"
-    html = r.get(url)
-    soup = bs(html.content, 'lxml')
-    links = [urljoin(data_url, link.attrs['href']) for link in soup.select('.span-84 a')]
-    return links
+engine = create_engine('postgresql://postgres:specials@localhost/mta')
+db.Base.metadata.create_all(engine)
+meta = MetaData(bind=engine)
+readings = Table('readings', meta, autoload=True)
 
+link = turnstile.mta_turnstile_readings()[0]
+
+html = r.get(link)
+text = html.text
+
+data = csv.reader(StringIO(text))
+
+data.__next__()
+
+data_list = list(data)
