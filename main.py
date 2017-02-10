@@ -1,4 +1,3 @@
-'''creates tables and import turnstile data'''
 from sqlalchemy import create_engine, Table, MetaData
 import database as db
 import turnstile
@@ -11,13 +10,16 @@ db.Base.metadata.create_all(engine)
 meta = MetaData(bind=engine)
 readings = Table('readings', meta, autoload=True)
 
-link = turnstile.mta_turnstile_readings()[0]
+conn = engine.connect()
 
-html = r.get(link)
-text = html.text
+columns = ['ca', 'unit', 'scp', 'station', 'linename', 'division', 'date', 'time', 'desc', 'entries', 'exits']
 
-data = csv.reader(StringIO(text))
+links = turnstile.mta_turnstile_readings()[0:5]
 
-data.__next__()
-
-data_list = list(data)
+for link in links:
+    print("Import from: ", link)
+    html = r.get(link)
+    data = csv.reader(StringIO(html.text))
+    data.__next__() #skips headers in first row
+    data = [dict(zip(columns, row)) for row in list(data)]
+    conn.execute(readings.insert(), data)
